@@ -1,7 +1,7 @@
 exportPattern("^[[:alpha:]]+")
 import(label.switching)
 import(foreach)
-import(doMC)
+import(doParallel)
 importFrom("grDevices", "topo.colors")
 importFrom("graphics", "legend", "matplot")
 importFrom("stats", "dbinom", "dpois", "ppois", "rbeta", "rgamma", "runif")

@@ -1,4 +1,7 @@
-library('label.switching')
+#library('label.switching')
+#library('doParallel')
+#library('foreach')
+
 myDirichlet <- function(alpha){
 	k <- length(alpha)
 	theta <- rgamma(k, shape = alpha, rate = 1)
@@ -1206,8 +1209,6 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 	cat(paste0("back to working directory now."),"\n")
 }
 
-library('foreach')
-library('doMC')
 coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPrior,m, alpha, beta, gamma, z.true, ejectionAlpha){
 	if(missing(nChains) == TRUE){stop(cat(paste("    [ERROR]: number of chains not provided."), "\n"))}
 	if(missing(heats) == TRUE){
@@ -1257,8 +1258,8 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 					outputDir = outPrefix,Kstart = 1,heat=myHeat,metropolisMoves = c('M1','M2','M3','M4'),LS = FALSE)}
 	else{
 
-
-		registerDoMC(nChains)
+		registerDoParallel(cores = nChains)
+		#registerDoMC(nChains)
 		outputDirs <- paste0(outPrefix,1:nChains)
 		temperatures <- heats
 		myChain <- 1
