@@ -1,0 +1,12 @@
+d3d462755c28bd5fe56da292e4bab149 *DESCRIPTION
+022564efc68ec9b726e410f192058e0a *NAMESPACE
+1f8dd57e797f581a8ebf85cd81424c54 *R/coupledMetropolis.R
+d03450bb6c472dbec1159912720122cf *man/BayesBinMix-package.Rd
+6e50d16dcbfe3c684e467b01b1bb73a9 *man/allocationSamplerBinMix.Rd
+dca1e80ca1144140d486b42b426d2b0e *man/collapsedGibbsBinMix.Rd
+47c264e088df42d1b1e45e2ace3180b8 *man/complete.loglikelihood.Rd
+a256d1aa9cb32cc8104b475da1508c6f *man/coupledMetropolis.Rd
+5300eb6ad2a9474358218774d0362274 *man/dealWithLabelSwitching.Rd
+d0b1748d015d5784b1c545220f63558b *man/gibbsBinMix.Rd
+68ce7440a2f0de0e75da0483954172ad *man/myDirichlet.Rd
+0fc3dcc5ae7007a546a45c0de66df52c *man/toSolve.Rd
