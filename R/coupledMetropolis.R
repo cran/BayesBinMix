@@ -1246,6 +1246,9 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 	if(is.na(myCheck) == FALSE){
 		stop(cat(paste("    [ERROR]: directory exists, please provide different name to outPrefix."), "\n"))
 	}
+	if( missing(z.true) ){
+		z.true <- NULL
+	}
 
 
 
@@ -1268,7 +1271,7 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 		}
 		cat(paste0("    [NOTE]: screen output from multiple threads is redirected to \'",outPrefix,"-sampler.log\'."), "\n")
 		sink(paste0(outPrefix,'-sampler.log'))
-		foreach(myChain=1:nChains) %dopar% {
+		foreach(myChain=1:nChains, .export=ls(envir=globalenv()) ) %dopar% {
 			outDir <- outputDirs[myChain]
 			dir.create(outDir)
 			myHeat <- temperatures[myChain]
@@ -1354,7 +1357,7 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 				#cat(paste('switching.'),'\n')
 			}
 			myChain <- 1
-			foreach(myChain=1:nChains) %dopar% {
+			foreach(myChain=1:nChains, .export=ls(envir=globalenv()) ) %dopar% {
 				outDir <- outputDirs[myChain]
 				myHeat <- temperatures[myChain]
 				Kstart <- currentK[myChain]
@@ -1388,8 +1391,9 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 			unlink(paste0(outPrefix,k), recursive=TRUE)
 		}
 		sink()
+		stopImplicitCluster()
 	}
-	if(missing(z.true) == TRUE){
+	if(is.null(z.true) == TRUE){
 		dealWithLabelSwitching(outDir = outPrefix, binaryData = binaryData)
 	}else{
 		dealWithLabelSwitching(outDir = outPrefix, binaryData = binaryData, z.true = z.true)

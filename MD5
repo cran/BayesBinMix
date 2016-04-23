@@ -1,7 +1,7 @@
-297db96c9187519d346013e4751f0cb7 *DESCRIPTION
+435adad4560c56a6b83ae3857c3bfa8e *DESCRIPTION
 dc689117687f782a9bcc9f0e9e7b2905 *NAMESPACE
-ff707bd109bab587fa4796523c5ecd3b *R/coupledMetropolis.R
-91f4da8a562da154c84e93eaa6411dd8 *man/BayesBinMix-package.Rd
+40c73ab89984b9bdf518a6716b00dda8 *R/coupledMetropolis.R
+79529565883f134be3661e3a544e6075 *man/BayesBinMix-package.Rd
 6e50d16dcbfe3c684e467b01b1bb73a9 *man/allocationSamplerBinMix.Rd
 dca1e80ca1144140d486b42b426d2b0e *man/collapsedGibbsBinMix.Rd
 47c264e088df42d1b1e45e2ace3180b8 *man/complete.loglikelihood.Rd
