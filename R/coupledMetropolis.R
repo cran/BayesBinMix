@@ -533,7 +533,7 @@ collapsedGibbsBinMix <- function(alpha,beta,gamma,K,m,burn,data,thinning,z.true,
 
 
 
-allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,z.true,ClusterPrior,ejectionAlpha,Kstart,outputDir,metropolisMoves,reorderModels,heat,zStart,LS){
+allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,z.true,ClusterPrior,ejectionAlpha,Kstart,outputDir,metropolisMoves,reorderModels,heat,zStart,LS, rsX, originalX){
 #	if(dir.exists(outputDir) == TRUE){
 #		stop(cat(paste("    [ERROR]: directory exists, please provide different name."), "\n"))
 #	}
@@ -543,7 +543,7 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 	if (missing(m)) {stop(cat(paste("    [ERROR]: number of MCMC iterations (m) not provided."), "\n"))}
 	if (missing(thinning)) {thinning <- 5}
 	if (missing(LS)) {LS <- TRUE}
-	if (missing(thinning)) {ejectionAlpha <- 1}
+	if (missing(ejectionAlpha)) {ejectionAlpha <- 1}
 	if (burn > m - 1) {
 		stop(cat(paste("    [ERROR]: burn-in period (burn) not valid"), "\n"))
 	}
@@ -789,7 +789,6 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 		}
 #		end of reallocation proposal 1
 		if(mNumber == 'M2'){
-
 #		reallocation proposal2
 		if(K > 1){
 			myPair <- sample(K,2,replace = FALSE)
@@ -850,7 +849,6 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 			set1 <- which(z == myPair[1])
 			nOld <- c(length(set1),0)
 			ejectionAlpha <- toSolve(seq(0.0001,2,length = 500),nOld[1],pZERO);constLGAMMA <- 2*lgamma(ejectionAlpha) - lgamma(2*ejectionAlpha)
-
 			propZ <- z
 			myP <- rbeta(1,shape1 = ejectionAlpha,shape2 = ejectionAlpha)
 			propZ[set1] <- myPair[sample(2,nOld[1], replace = TRUE,prob = c(1-myP,myP) )]
@@ -936,7 +934,6 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 
 
 		if(mNumber == 'M4'){
-
 #	reallocation proposal from conditional probs
 
 			if(K > 1){
@@ -1058,6 +1055,14 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 
 						}
 						theta[k,] <- rbeta(d, shape1 = alpha + sx[k,], shape2 = beta + s[k] - sx[k,])
+					}
+					# in case of missing values
+					if( length(rsX) > 0){
+						for(i in rsX){
+							na.index <- which(is.na(originalX[i,]) == TRUE)
+							x[i, na.index] <- rbinom(n = length(na.index), size = 1, prob = theta[z[i],na.index])
+						}
+						write.table(x,file = "currentX.txt", quote = FALSE, row.names = FALSE, col.names = FALSE)
 					}
 					p <- myDirichlet(gamma[1:K] + s[1:K])
 					cat(theta,"\n",file=conTheta)
@@ -1209,7 +1214,7 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 	cat(paste0("back to working directory now."),"\n")
 }
 
-coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPrior,m, alpha, beta, gamma, z.true, ejectionAlpha){
+coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPrior,m, alpha, beta, gamma, z.true, ejectionAlpha, burn){
 	if(missing(nChains) == TRUE){stop(cat(paste("    [ERROR]: number of chains not provided."), "\n"))}
 	if(missing(heats) == TRUE){
 		heats <- seq(1,0.1,length = nChains)
@@ -1239,6 +1244,16 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 	}
 	if(missing(ejectionAlpha) == TRUE){ejectionAlpha <- 0.2}
 	x <- binaryData
+	rsX <- which(is.na(rowSums(x)) == TRUE)
+	originalX <- x
+	if(length(rsX) > 0){
+		cat(paste("    [NOTE]: Found ",length(rsX) ," rows with missing values."), "\n")
+		for(i in rsX){
+			na.index <- which(is.na(x[i,]) == TRUE)
+			x[i,na.index] <- rbinom(n = length(na.index), size = 1, prob = alpha/(alpha + beta))
+		}
+	}
+
 	currentZ <- array(data = NA, dim = c(nChains,n))
 	currentK <- numeric(nChains)
 	# check if dir exists and stop in this case
@@ -1249,16 +1264,21 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 	if( missing(z.true) ){
 		z.true <- NULL
 	}
-
-
+	if(missing(burn)){burn = 0}
+	if(burn > m - 1){
+		stop(cat(paste("    [ERROR]: Burn-in period not valid: \'burn\' should be less than \'m\'."), "\n"))
+	}
+	
 
 	if(nChains < 2){
+		if(length(rsX) > 0){
+			stop(cat(paste("    [ERROR]: At least two chains should be used."), "\n"))}
 		cat(paste("            Only 1 chain? Well."),"\n")
 		dir.create(outPrefix)
 		myHeat <- 1
-		allocationSamplerBinMix( alpha = alpha, beta = beta, gamma = gamma, m = 10*m, burn= 9, data = binaryData, 
+		allocationSamplerBinMix( alpha = alpha, beta = beta, gamma = gamma, m = 10*m, burn= 10*burn, data = x, 
 					thinning = 10,Kmax = Kmax, ClusterPrior = ClusterPrior,ejectionAlpha = ejectionAlpha, 
-					outputDir = outPrefix,Kstart = 1,heat=myHeat,metropolisMoves = c('M1','M2','M3','M4'),LS = FALSE)}
+					outputDir = outPrefix,Kstart = 1,heat=myHeat,metropolisMoves = c('M1','M2','M3','M4'),LS = FALSE, rsX = rsX, originalX = originalX)}
 	else{
 
 		registerDoParallel(cores = nChains)
@@ -1275,12 +1295,10 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 			outDir <- outputDirs[myChain]
 			dir.create(outDir)
 			myHeat <- temperatures[myChain]
-			allocationSamplerBinMix( alpha = alpha, beta = beta, gamma = gamma, m = 10, burn= 9, data = binaryData, 
+			allocationSamplerBinMix( alpha = alpha, beta = beta, gamma = gamma, m = 10, burn= 9, data = x, 
 						thinning = 1,Kmax = Kmax, ClusterPrior = ClusterPrior,ejectionAlpha = ejectionAlpha, 
-						outputDir = outDir,Kstart=1,heat=myHeat,metropolisMoves='M3',LS = FALSE)
+						outputDir = outDir,Kstart=1,heat=myHeat,metropolisMoves='M3',LS = FALSE, rsX = rsX, originalX = originalX)
 		}
-
-
 
 		ITERATIONS <- m
 		sampledK <- array(data = 0, dim = c(ITERATIONS,nChains))
@@ -1289,16 +1307,26 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 		theta.file <- paste0(outPrefix,"/theta.varK.txt")
 		z.file <- paste0(outPrefix,"/z.varK.txt")
 		p.file <- paste0(outPrefix,"/p.varK.txt")
+		x.file <- paste0(outPrefix,"/x.txt")
 		conK = file(k.file,open = "w")
 		conTheta = file(theta.file,open = "w")
 		conZ = file(z.file,open = "w")
 		conP = file(p.file,open = "w")
+		if(length(rsX) > 0){
+			# in case of missing values, the augmented data will be written to the file:
+			conX <- file(x.file, open = "w")	
+		}
+
 		ar <- 0
 		metMoves <- vector('list',length = nChains)
 		metMoves[[1]] <- c('M1','M2','M3','M4')
 		for(j in 2:nChains){metMoves[[j]] <- c('M2','M3')}
 		localAR <- 0	#every 10 iterations
 		for(iter in 1:ITERATIONS){
+			if(length(rsX) > 0){
+				x <- as.matrix(read.table(paste0(outPrefix,1,'/currentX.txt')))
+			}
+
 			for(myChain in 1:nChains){
 				currentZ[myChain,] <- as.numeric(read.table(paste0(outPrefix,myChain,'/z.varK.txt'))[1,])
 				currentK[myChain] <- read.table(paste0(outPrefix,myChain,'/K.txt'))[1,]
@@ -1362,9 +1390,10 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 				myHeat <- temperatures[myChain]
 				Kstart <- currentK[myChain]
 				zStart <- currentZ[myChain,]
-				allocationSamplerBinMix( alpha = alpha, beta = beta, gamma = gamma, m = 10, burn= 9, data = binaryData, 
+				allocationSamplerBinMix( alpha = alpha, beta = beta, gamma = gamma, m = 10, burn= 9, data = x, 
 							thinning = 1,Kmax = Kmax, ClusterPrior = ClusterPrior,ejectionAlpha = ejectionAlpha, 
-							outputDir = outDir,Kstart=Kstart,zStart = zStart, heat=myHeat,metropolisMoves =  metMoves[[myChain]],LS = FALSE)
+							outputDir = outDir,Kstart=Kstart,zStart = zStart, heat=myHeat,
+							metropolisMoves =  metMoves[[myChain]],LS = FALSE, rsX = rsX, originalX = originalX)
 			}
 
 			if(iter %% (m/100) == 0){
@@ -1372,20 +1401,26 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 				legend('topleft',paste0('f(z,K|data)^{',round(heats,3),'}'),lty = 1, lwd = 2, col = topo.colors(nChains))
 				write(paste0(100*iter/m,'% completed. Chain switching acceptance rate: ',100*round(ar/iter,3),'%.'),stderr())
 			}
-			kk <- as.numeric(read.table(paste0(outPrefix,"1/K.txt"))[1,])
-			cat(kk,"\n",file=conK)
-			theta <- as.numeric(read.table(paste0(outPrefix,"1/theta.varK.txt"))[1,])
-			cat(theta,"\n",file=conTheta)
-			z <- as.numeric(read.table(paste0(outPrefix,"1/z.varK.txt"))[1,])
-			cat(z,"\n",file=conZ)
-			p <- as.numeric(read.table(paste0(outPrefix,"1/p.varK.txt"))[1,])
-			cat(p,"\n",file=conP)		
-
+			if(iter > burn){
+				kk <- as.numeric(read.table(paste0(outPrefix,"1/K.txt"))[1,])
+				cat(kk,"\n",file=conK)
+				theta <- as.numeric(read.table(paste0(outPrefix,"1/theta.varK.txt"))[1,])
+				cat(theta,"\n",file=conTheta)
+				z <- as.numeric(read.table(paste0(outPrefix,"1/z.varK.txt"))[1,])
+				cat(z,"\n",file=conZ)
+				p <- as.numeric(read.table(paste0(outPrefix,"1/p.varK.txt"))[1,])
+				cat(p,"\n",file=conP)
+				if(length(rsX) > 0){cat(x,"\n",file=conX)}
+			}
+	
 		}
 		close(conK)
 		close(conTheta)
 		close(conP)
 		close(conZ)
+		if(length(rsX) > 0){
+			close(conX)
+		}
 		write.table(sampledK, file = paste0(outPrefix,"/K.allChains.txt"), col.names = paste0('chain.',1:nChains),quote=FALSE,row.names = FALSE)
 		for(k in 1:nChains){
 			unlink(paste0(outPrefix,k), recursive=TRUE)
@@ -1393,10 +1428,20 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 		sink()
 		stopImplicitCluster()
 	}
-	if(is.null(z.true) == TRUE){
-		dealWithLabelSwitching(outDir = outPrefix, binaryData = binaryData)
+	if(length(rsX) == 0){
+		# x contains no missing values
+		if(is.null(z.true) == TRUE){
+			dealWithLabelSwitching(outDir = outPrefix, binaryData = binaryData)
+		}else{
+			dealWithLabelSwitching(outDir = outPrefix, binaryData = binaryData, z.true = z.true)
+		}
 	}else{
-		dealWithLabelSwitching(outDir = outPrefix, binaryData = binaryData, z.true = z.true)
+		# x contains missing values
+		if(is.null(z.true) == TRUE){
+			dealWithLabelSwitchingMissing(outDir = outPrefix, binaryData = binaryData)
+		}else{
+			dealWithLabelSwitchingMissing(outDir = outPrefix, binaryData = binaryData, z.true = z.true)
+		}
 	}
 }
 
@@ -1457,26 +1502,6 @@ dealWithLabelSwitching <- function(outDir,reorderModels, binaryData,z.true){
 				if(ll > maxLL){maxLL <- ll;maxIter <- iter;cat(paste("Found new Complete MLE: ", ll,sep=""),"\n")}
 			}
 			# classification probs
-			#####OLD 
-#			ptm <- proc.time()
-#			pMatrix <- array(data = NA, dim = c(m,n,K))
-#			l <- numeric(K)
-#			for (iter in 1:m){
-#				p <- mcmc[iter,,J]
-#				theta <- array( mcmc[iter,,1:(J-1)],dim = c(K,J-1) )
-#				for(i in 1:n){
-#					for(k in 1:K){
-#						l[k] <- log(p[k]) + sum(x[i,]*log(theta[k,]) + (1-x[i,])*log(1-theta[k,]))
-#					}
-#					for(k in 1:K){
-#						pMatrix[iter,i,k] <- 1/sum(exp(l - l[k]))
-#						if(is.na(pMatrix[iter,i,k]) == TRUE){pMatrix[iter,i,k] = 0}
-#					}
-#				}
-#				if(iter %% 1000 == 0){cat(paste(" classification probs: ",100*round(iter/m,3),"% completed",sep=""),"\n");}
-#			}
-#			cat(paste0("proc.time for classification probabalities1: ", round(as.numeric((proc.time() - ptm)[3]),2)),"\n")
-			#####NEW 
 			ptm <- proc.time()
 			pMatrix <- array(data = NA, dim = c(m,n,K))
 			l <- array(data = 0, dim = c(n,K))
@@ -1565,6 +1590,166 @@ dealWithLabelSwitching <- function(outDir,reorderModels, binaryData,z.true){
 	setwd("../")
 
 }
+
+
+
+dealWithLabelSwitchingMissing <- function(outDir,reorderModels, binaryData, z.true){
+	setwd(outDir)
+	x <- binaryData
+	d <- dim(x)[2]
+	n <- dim(x)[1]
+
+	x.file <- "x.txt"
+	kFile <- read.table("K.txt")[,1]
+	theta.file <- "theta.varK.txt"
+	z.file <- "z.varK.txt"
+	p.file <- "p.varK.txt"
+	cat("\n")
+	print(table(kFile)/length(kFile))
+	K <- as.numeric(names(table(kFile))[order(table(kFile),decreasing=TRUE)[1]])
+	cat("\n")
+	cat(paste("Most probable model: K = ",K," with P(K = ",K,") = ",max(table(kFile)/length(kFile)),sep=""),"\n")		
+	cat("\n")
+	if(missing(reorderModels)==TRUE){reorderModels <- 'onlyMAP'}
+	if(reorderModels == 'onlyMAP'){kRange <- K}else{
+		kRange <- as.numeric(names(table(kFile)/length(kFile)))
+	}
+	for ( K in kRange ){
+		tt <- read.table("theta.varK.txt")
+		index <- which(kFile == K)
+		J <- d + 1
+		m <- length(index)
+		mcmc <- array(data = NA, dim = c(m,K,J))
+		Kmax <- (dim(tt)/d)[2]
+		for (j in 1:d){
+			for(k in 1:K){
+				mcmc[,k,j] <- tt[index,(j-1)*Kmax + k]
+			}
+		}
+		conP = file(p.file,open = "r")
+		i <- 0
+		j <- 0
+		while (length(oneLine <- readLines(conP, n = 1, warn = FALSE)) > 0) {
+			i <- i + 1
+			if(kFile[i] == K){
+				j <- j + 1
+				mcmc[j,,J] <- as.numeric(strsplit(oneLine,split = " ")[[1]])
+			}
+		}
+		close(conP)
+		if (K > 1){
+			cat(paste("Dealing with Label Switching for K =",K),"\n")
+			conX <- file(x.file, open = "r")
+			allocations <- as.matrix(read.table("z.varK.txt",as.is = TRUE)[index,])
+			pMatrix <- array(data = NA, dim = c(m,n,K))
+			l <- array(data = 0, dim = c(n,K))
+			ptm <- proc.time()
+			iter <- 0	
+			xEstimated <- array(data = 0, dim = c(n,d))		
+			for(xLine in 1:length(kFile)){
+				xC <- readLines(conX, n = 1, warn = FALSE)
+				if( is.na(match(xLine,index)) == FALSE){
+					x <- as.numeric(strsplit(xC,split = " ")[[1]])
+					x <- matrix(x,nrow = n, ncol = d)
+					xEstimated <- xEstimated + x
+					iter <- iter + 1
+#					cat(paste0("line = ",xLine, ", index = ",iter, ", rsX = ", sum(x)),"\n")
+					# finding MLE
+					ll <- complete.loglikelihood(x,allocations[iter,],mcmc[iter,,]) 
+					if(iter == 1){ maxLL <- ll; maxIter <- iter }
+					if(ll > maxLL){maxLL <- ll;maxIter <- iter;cat(paste("Found new Complete MLE: ", ll,sep=""),"\n")}
+					# classification probs
+					LOG.P <- log(mcmc[iter,,J])
+					LOG.THETA <- array(log(mcmc[iter,,1:(J-1)]),dim = c(K,J-1) )
+					LOG.1_MINUS_THETA <- array(log(1 - mcmc[iter,,1:(J-1)]),dim = c(K,J-1) )
+					for(k in 1:K){
+						l[,k] <- LOG.P[k] + rowSums( x * matrix(LOG.THETA[k,], nrow = n, ncol = J - 1, byrow = TRUE) + (1-x)*matrix(LOG.1_MINUS_THETA[k,], nrow = n, ncol = J - 1, byrow = TRUE))
+					}
+					for(k in 1:K){
+						pMatrix[iter,,k] <- apply(l,1,function(y){return(1/sum(exp(y - y[k])))} )
+						ind <- which(is.na(pMatrix[iter,,k]) == TRUE) 
+						nInd <- length(ind)
+						if(nInd > 0){pMatrix[iter,ind,k] <- rep(0,nInd)}
+					}
+					if(iter %% 100 == 0){cat(paste(" classification probs: ",100*round(iter/m,3),"% completed",sep=""),"\n");}
+
+				}
+			}
+			xEstimated <- xEstimated/iter
+			write.table(file = "xEstimated.txt", xEstimated, quote = FALSE)
+			close(conX)
+			cat(paste0("proc.time for classification probabilities: ", round(as.numeric((proc.time() - ptm)[3]),2)),"\n")
+			cat(paste0("estimated missing data file written to: \'xEstimated.txt\'"),"\n")
+			if(missing(z.true)==TRUE){
+				ls <- label.switching( method = c("STEPHENS","ECR","ECR-ITERATIVE-1"),
+							zpivot = allocations[maxIter,], z = allocations,K = K, complete = complete.loglikelihood, data = x,
+							prapivot = mcmc[maxIter,,], mcmc = mcmc, p = pMatrix)
+			}else{
+				ls <- label.switching( method = c("STEPHENS","ECR","ECR-ITERATIVE-1"),
+							zpivot = allocations[maxIter,], z = allocations,K = K, complete = complete.loglikelihood, data = x,
+							prapivot = mcmc[maxIter,,], mcmc = mcmc, p = pMatrix,groundTruth = z.true)
+			}
+			reordered.mcmc<-permute.mcmc(mcmc,ls$permutations$"ECR")$output
+			write.table(reordered.mcmc, file = paste("reorderedMCMC-ECR.mapK.",K,".txt",sep=""),col.names = c(paste(rep(paste(expression(theta),1:K,sep="."),d),rep(1:d,each=K),sep="-"),paste('p',1:K,sep=".")))
+			reordered.mcmc<-permute.mcmc(mcmc,ls$permutations$"ECR-ITERATIVE-1")$output
+			write.table(reordered.mcmc, file = paste("reorderedMCMC-ECR-ITERATIVE1.mapK.",K,".txt",sep=""),col.names = c(paste(rep(paste(expression(theta),1:K,sep="."),d),rep(1:d,each=K),sep="-"),paste('p',1:K,sep=".")))
+			reordered.mcmc<-permute.mcmc(mcmc,ls$permutations$"STEPHENS")$output
+			write.table(reordered.mcmc, file = paste("reorderedMCMC-STEPHENS.mapK.",K,".txt",sep=""),col.names = c(paste(rep(paste(expression(theta),1:K,sep="."),d),rep(1:d,each=K),sep="-"),paste('p',1:K,sep=".")))
+			write.table(mcmc, file = paste("rawMCMC.mapK.",K,".txt",sep=""),col.names = c(paste(rep(paste(expression(theta),1:K,sep="."),d),rep(1:d,each=K),sep="-"),paste('p',1:K,sep=".")))
+			write.table(file = paste("reorderedSingleBestClusterings.mapK.",K,".txt",sep=""),t(ls$clusters[c(1,2,3),]),row.names = paste("z",1:n,sep="."))
+
+			#reordering allocations 
+			allocationsECR <- allocationsKL <- allocationsECR.ITERATIVE1 <- allocations
+			for (i in 1:m){
+				myPerm <- order(ls$permutations$"ECR"[i,])
+				allocationsECR[i,] <- myPerm[allocations[i,]]
+				myPerm <- order(ls$permutations$"STEPHENS"[i,])
+				allocationsKL[i,] <- myPerm[allocations[i,]]
+				myPerm <- order(ls$permutations$"ECR-ITERATIVE-1"[i,])
+				allocationsECR.ITERATIVE1[i,] <- myPerm[allocations[i,]]
+
+			}
+			MeanReorderedpMatrix <- array(data = 0, dim = c(n,K))    # define object that will contain the classification probs
+			for (i in 1:m){
+				myPerm <- ls$permutations$"ECR"[i,]   # this is the permutation of labels for iteration i according to ECR algorithm
+				MeanReorderedpMatrix <- MeanReorderedpMatrix + pMatrix[i, ,myPerm]   # apply myPerm to the columns of pMatrix for given iteration and add the permuted matrix to MeanReorderedpMatrix
+			}
+			MeanReorderedpMatrix <- MeanReorderedpMatrix/m    # this is the final estimate of classification probabilities. 
+			write.csv(MeanReorderedpMatrix, file = paste0("classificationProbabilities.mapK.",K,".csv"), row.names = FALSE)
+
+
+			write.table(allocationsECR, file = paste("z.ECR.mapK.",K,".txt",sep=""))
+			write.table(allocationsKL, file = paste("z.KL.mapK.",K,".txt",sep=""))
+			write.table(allocationsECR.ITERATIVE1, file = paste("z.ECR-ITERATIVE1.mapK.",K,".txt",sep=""))
+			#file.remove("p.collapsed.txt")
+			#file.remove("theta.collapsed.txt")
+			cat(paste0("raw MCMC parameters for most probable K written to: \'rawMCMC.mapK.",K,".txt\' "),"\n")
+			cat(paste0("raw MCMC latent allocations for most probable K written to: \'z.mapK.",K,".txt\' "),"\n")
+			cat(paste0("reordered MCMC output written to: "),"\n")
+			cat(paste0("     (Method 1):     \'reorderedMCMC-ECR.mapK.",K,".txt\'"),"\n")
+			cat(paste0("     (Method 2):     \'reorderedMCMC-ECR-ITERATIVE1.mapK.",K,".txt\'"),"\n")
+			cat(paste0("     (Method 3):     \'reorderedMCMC-STEPHENS.mapK.",K,".txt\'"),"\n")
+			cat(paste0("reordered single best clusterings written to: \'reorderedSingleBestClusterings.mapK.",K,".txt\' "),"\n")
+			cat(paste0("reordered MCMC latent allocations for most probable K written to: "),"\n")
+			cat(paste0("     (Method 1):     \'z.ECR.mapK.",K,".txt\'"),"\n")
+			cat(paste0("     (Method 2):     \'z.KL.mapK.",K,".txt\'"),"\n")
+			cat(paste0("     (Method 3):     \'z.ECR-ITERATIVE1.mapK.",K,".txt\'"),"\n")
+
+		}else{
+			cat(paste0('[NOTE]:    Most probable model corresponds to 1 cluster so the label-switching algorithms are not applied.',"\n"))
+			write.table(mcmc, file = paste("MCMC.mapK.",K,".txt",sep=""),col.names = c(paste(rep(paste(expression(theta),1:K,sep="."),d),rep(1:d,each=K),sep="-"),paste('p',1:K,sep=".")))
+			cat(paste0("MCMC output corresponding to most probable model (K = 1) written to: \'", paste("MCMC.mapK.",K,".txt",sep=""),"\'"),"\n")
+
+
+		}
+
+	}
+	setwd("../")
+
+}
+
+
+
 
 
 

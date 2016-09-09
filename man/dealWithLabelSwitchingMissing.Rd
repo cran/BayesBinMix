@@ -1,14 +1,14 @@
-\name{dealWithLabelSwitching}
-\alias{dealWithLabelSwitching}
+\name{dealWithLabelSwitchingMissing}
+\alias{dealWithLabelSwitchingMissing}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Label switching algorithms
+Label switching algorithms for the case of missing data
 }
 \description{
 This is a wrapper for the \code{label.switching} package. It is used to post-process the generated MCMC sample in order to undo the label switching problem. This function is called internally to the \code{coupledMetropolis} command.
 }
 \usage{
-dealWithLabelSwitching(outDir, reorderModels, binaryData, z.true)
+dealWithLabelSwitchingMissing(outDir, reorderModels, binaryData, z.true)
 }
 \arguments{
   \item{outDir}{

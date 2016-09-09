@@ -9,7 +9,7 @@ This function implements the collapsed allocation sampler of Nobile and Fearnsid
 \usage{
 allocationSamplerBinMix(Kmax, alpha, beta, gamma, m, burn, data, 
 thinning, z.true, ClusterPrior, ejectionAlpha, Kstart, outputDir, 
-metropolisMoves, reorderModels, heat, zStart, LS)
+metropolisMoves, reorderModels, heat, zStart, LS, rsX, originalX)
 }
 \arguments{
   \item{Kmax}{
@@ -31,7 +31,7 @@ Number of MCMC iterations.
 The number of initial MCMC iterations that will be discarded as burn-in period.
 }
   \item{data}{
-Binary data array.
+Binary data array (NAs not allowed here).
 }
   \item{thinning}{
 Integer that defines a thinning of the reported MCMC sample. Under the default setting, every 5th MCMC iteration is saved.
@@ -66,6 +66,12 @@ The temperature of the simulated chain, that is, a scalar in the set \eqn{(0,1]}
   \item{LS}{
 Boolean indicating whether to post-process the MCMC sample using the label switching algorithms.
 }
+  \item{rsX}{
+Optional vector containing the row-sums of the observed data (NAs are allowed). It is required only in the case of missing values.
+}
+  \item{originalX}{
+Optional array containing the observed data (containing NAs). It is required only in the case of missing values.
+}
 }
 \details{
 The output is reordered according to the following label-switching solving algorithms: ECR, ECR-ITERATIVE-1 and STEPHENS. In most cases the results of these different algorithms are identical. 
@@ -73,13 +79,19 @@ The output is reordered according to the following label-switching solving algor
 \references{
 Nobile A and Fearnside A (2007): Bayesian finite mixtures with an unknown number of components: The allocation sampler. Statistics and Computing, 17(2): 147-162.
 
+Papastamoulis P. and Iliopoulos G. (2010). An artificial allocations based solution to the label switching problem in Bayesian analysis of mixtures of distributions. Journal of Computational and Graphical Statistics, 19: 313-331.
+
+Papastamoulis P. and Iliopoulos G. (2013). On the convergence rate of Random Permutation Sampler and ECR algorithm in missing data models. Methodology and Computing in Applied Probability, 15(2): 293-304.
+
+Papastamoulis P. (2014). Handling the label switching problem in latent class models via the ECR algorithm. Communications in Statistics, Simulation and Computation, 43(4): 913-927.
+
 Papastamoulis P (2016): label.switching: An R package for dealing with the label switching problem in MCMC outputs. Journal of Statistical Software, 69(1): 1-24.
 }
 \author{
 Panagiotis Papastamoulis
 }
 \note{
-This function is recursively called inside the \code{\link{coupledMetropolis}} function. 
+This function is recursively called inside the \code{\link{coupledMetropolis}} function. There is no need to call it separately. 
 }
 \seealso{
 \code{\link{coupledMetropolis}}

@@ -9,7 +9,7 @@ Main function of the package. The algorithm consists of the allocation sampler c
 }
 \usage{
 coupledMetropolis(Kmax, nChains, heats, binaryData, outPrefix, ClusterPrior,
-	 m, alpha, beta, gamma, z.true, ejectionAlpha)
+	 m, alpha, beta, gamma, z.true, ejectionAlpha, burn)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -23,7 +23,7 @@ Number of parallel (heated) chains. Ideally, it should be equal to the number of
 \code{nChains}-dimensional vector specifying the temperature of each chain: the 1st entry should always be equal to 1 and the rest of them lie on the set: \eqn{(0,1]}.
 }
   \item{binaryData}{
-The observed binary data (array).
+The observed binary data (array). Missing values are allowed as long as the corresponding entries are denoted as \code{NA}.
 }
   \item{outPrefix}{
 The name of the produced output folder. An error is thrown if the directory exists.
@@ -48,6 +48,9 @@ An optional vector of cluster assignments considered as the ground-truth cluster
 }
   \item{ejectionAlpha}{
 Probability of ejecting an empty component. Defaults to 0.2.
+}
+  \item{burn}{
+Optional integer denoting the number of MCMC cycles that will be discarded as burn-in period.
 }
 }
 \details{
@@ -97,6 +100,9 @@ The final output is written to the directory \code{outPrefix}. It consists of th
 	\item{classificationProbabilities.mapK.KVALUE.csv}{
 		the reordered classification probabilities per observation after reordering the most probable number of clusters with the \code{ECR} algorithm.
 	}
+	\item{xEstimated.txt}{
+		Observed data with missing values estimated by their posterior mean estimate. This file is produced only in the case that the observed data contains missing values.
+	}
 
 \code{KVALUE} will be equal to the inferred number of clusters. Note that the label switching part is omitted in case that the most probable number of clusters is equal to 1.
 
@@ -105,6 +111,12 @@ The final output is written to the directory \code{outPrefix}. It consists of th
 Altekar G, Dwarkadas S, Huelsenbeck JP, Ronquist F. (2004): Parallel Metropolis coupled Markov chain Monte Carlo for Bayesian phylogenetic inference. Bioinformatics 20(3): 407-415.
 
 Nobile A and Fearnside A (2007): Bayesian finite mixtures with an unknown number of components: The allocation sampler. Statistics and Computing, 17(2): 147-162.
+
+Papastamoulis P. and Iliopoulos G. (2010). An artificial allocations based solution to the label switching problem in Bayesian analysis of mixtures of distributions. Journal of Computational and Graphical Statistics, 19: 313-331.
+
+Papastamoulis P. and Iliopoulos G. (2013). On the convergence rate of Random Permutation Sampler and ECR algorithm in missing data models. Methodology and Computing in Applied Probability, 15(2): 293-304.
+
+Papastamoulis P. (2014). Handling the label switching problem in latent class models via the ECR algorithm. Communications in Statistics, Simulation and Computation, 43(4): 913-927.
 
 Papastamoulis P (2016): label.switching: An R package for dealing with the label switching problem in MCMC outputs. Journal of Statistical Software, 69(1): 1-24.
 }
