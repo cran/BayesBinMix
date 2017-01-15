@@ -2,14 +2,14 @@ Package: BayesBinMix
 Type: Package
 Title: Bayesian Estimation of Mixtures of Multivariate Bernoulli
         Distributions
-Version: 1.3
-Date: 2016-09-8
+Version: 1.4
+Date: 2017-01-15
 Author: Panagiotis Papastamoulis
 Maintainer: Panagiotis Papastamoulis <papapast@yahoo.gr>
 Description: Fully Bayesian inference for estimating the number of clusters and related parameters to heterogeneous binary data.
-Imports: label.switching, foreach, doParallel
+Imports: label.switching, foreach, doParallel, coda
 License: GPL-2
 NeedsCompilation: no
-Packaged: 2016-09-09 13:54:32 UTC; panagiotispapastamoulis
+Packaged: 2017-01-15 11:22:16 UTC; mqbssppe
 Repository: CRAN
-Date/Publication: 2016-09-09 18:03:55
+Date/Publication: 2017-01-15 17:21:11

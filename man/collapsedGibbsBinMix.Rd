@@ -7,7 +7,8 @@ collapsed Gibbs sampler
 This function applied collapsed Gibbs sampling assuming that the number of mixture components is known.
 }
 \usage{
-collapsedGibbsBinMix(alpha, beta, gamma, K, m, burn, data, thinning, z.true, outputDir)
+collapsedGibbsBinMix(alpha, beta, gamma, K, m, burn, 
+	data, thinning, z.true, outputDir)
 }
 \arguments{
   \item{alpha}{

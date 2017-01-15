@@ -9,7 +9,7 @@ This function implements the collapsed allocation sampler of Nobile and Fearnsid
 \usage{
 allocationSamplerBinMix(Kmax, alpha, beta, gamma, m, burn, data, 
 thinning, z.true, ClusterPrior, ejectionAlpha, Kstart, outputDir, 
-metropolisMoves, reorderModels, heat, zStart, LS, rsX, originalX)
+metropolisMoves, reorderModels, heat, zStart, LS, rsX, originalX, printProgress)
 }
 \arguments{
   \item{Kmax}{
@@ -72,6 +72,10 @@ Optional vector containing the row-sums of the observed data (NAs are allowed). 
   \item{originalX}{
 Optional array containing the observed data (containing NAs). It is required only in the case of missing values.
 }
+  \item{printProgress}{
+Logical, indicating whether to print the progress of the sampler or not. Default: FALSE.
+}
+
 }
 \details{
 The output is reordered according to the following label-switching solving algorithms: ECR, ECR-ITERATIVE-1 and STEPHENS. In most cases the results of these different algorithms are identical. 

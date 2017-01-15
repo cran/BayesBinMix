@@ -1,6 +1,7 @@
 #library('label.switching')
 #library('doParallel')
 #library('foreach')
+#library('coda')
 
 myDirichlet <- function(alpha){
 	k <- length(alpha)
@@ -533,7 +534,7 @@ collapsedGibbsBinMix <- function(alpha,beta,gamma,K,m,burn,data,thinning,z.true,
 
 
 
-allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,z.true,ClusterPrior,ejectionAlpha,Kstart,outputDir,metropolisMoves,reorderModels,heat,zStart,LS, rsX, originalX){
+allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,z.true,ClusterPrior,ejectionAlpha,Kstart,outputDir,metropolisMoves,reorderModels,heat,zStart,LS, rsX, originalX, printProgress){
 #	if(dir.exists(outputDir) == TRUE){
 #		stop(cat(paste("    [ERROR]: directory exists, please provide different name."), "\n"))
 #	}
@@ -543,6 +544,7 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 	if (missing(m)) {stop(cat(paste("    [ERROR]: number of MCMC iterations (m) not provided."), "\n"))}
 	if (missing(thinning)) {thinning <- 5}
 	if (missing(LS)) {LS <- TRUE}
+	if (missing(printProgress)) { printProgress <- FALSE }
 	if (missing(ejectionAlpha)) {ejectionAlpha <- 1}
 	if (burn > m - 1) {
 		stop(cat(paste("    [ERROR]: burn-in period (burn) not valid"), "\n"))
@@ -679,10 +681,10 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 	kValues <- c()
 	#plot(c(1,m),c(0,1),type = "n")
 	if(missing(metropolisMoves) == TRUE){metropolisMoves <- c('M1','M2','M3','M4')}
-	lmm <- length(metropolisMoves)
-
-	cat(paste("    Reallocation proposal acceptance rates: Move 1, Move 2, Move 3, Move 4"),"\n")
-		                                              
+	lmm <- 1/length(metropolisMoves)
+	if( printProgress == TRUE){
+		cat(paste("    Reallocation proposal acceptance rates: Move 1, Move 2, Move 3, Move 4"),"\n")
+	}                           
 
 	for(iter in 1:m){
 		zOld <- z
@@ -766,6 +768,7 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 			for (i in 1:2){
 				logAR <- logAR + d*(lgamma(alpha + beta + nOld[i]) - lgamma(alpha + beta + nNew[i]) ) + sum(lgamma(alpha + sNew[i,]) + lgamma(beta + nNew[i] - sNew[i,]) - lgamma(alpha + sOld[i,]) - lgamma(beta + nOld[i] - sOld[i,]))
 			}
+			if(is.finite(logAR)){
 			if( log(runif(1)) < logAR ){
 				reallocationAcceptanceRatio <- reallocationAcceptanceRatio + 1 
 				z <- propZ
@@ -784,6 +787,7 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 					nMatrix[,k] <- rep(s[k],n) - tmpV
 					sMatrix[,k,] <- matrix(sx[k,],nrow = n,ncol = d,byrow = TRUE) - tmpM
 				}
+			}
 			}
 		}
 		}
@@ -814,6 +818,7 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 					logAR <- logAR + heat*d*(lgamma(alpha + beta + nOld[i]) - lgamma(alpha + beta + nNew[i]) ) + heat*sum(lgamma(alpha + sNew[i,]) + lgamma(beta + nNew[i] - sNew[i,]) - lgamma(alpha + sOld[i,]) - lgamma(beta + nOld[i] - sOld[i,]))
 				}
 				logAR <- logAR + heat*sum(lgamma(gamma[myPair] + nNew)) - heat*sum(lgamma(gamma[myPair] + nOld)) 
+				if(is.finite(logAR)){
 				if( log(runif(1)) < logAR ){
 					reallocationAcceptanceRatio2 <- reallocationAcceptanceRatio2 + 1 
 					z <- propZ
@@ -832,6 +837,7 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 						nMatrix[,k] <- rep(s[k],n) - tmpV
 						sMatrix[,k,] <- matrix(sx[k,],nrow = n,ncol = d,byrow = TRUE) - tmpM
 					}
+				}
 				}
 			}
 		}
@@ -908,7 +914,7 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 			logAR <- logAR + heat*lgamma(gamma[myPair[1]] + nNew[1]) - heat*sum(lgamma(gamma[myPair] + nOld)) + heat*lgamma(sum(gamma[1:(K-1)])) - heat*lgamma(sum(gamma[1:K])) - heat*lgamma(sum(gamma[1:(K-1)]) + n) + heat*lgamma(sum(gamma[1:K]) + n) + heat*lgamma(gamma[K]) + heat*d*lbeta(alpha, beta)
 			
 		}
-
+		if(is.finite(logAR)){
 		if( log(runif(1)) < logAR ){
 			reallocationAcceptanceRatio3 <- reallocationAcceptanceRatio3 + 1 
 			z <- propZ
@@ -928,6 +934,7 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 				nMatrix[,k] <- rep(s[k],n) - tmpV
 				sMatrix[,k,] <- matrix(sx[k,],nrow = n,ncol = d,byrow = TRUE) - tmpM
 			}
+		}
 		}
 		}
 #		end of update for the number of clusters
@@ -1003,7 +1010,8 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 			for (i in 1:2){
 				logAR <- logAR + d*(lgamma(alpha + beta + nOld[i]) - lgamma(alpha + beta + nNew[i]) ) + sum(lgamma(alpha + sNew[i,]) + lgamma(beta + nNew[i] - sNew[i,]) - lgamma(alpha + sOld[i,]) - lgamma(beta + nOld[i] - sOld[i,]))
 			}
-			logAR <- logAR + sum(lgamma(gamma[myPair] + nNew)) - sum(lgamma(gamma[myPair] + nOld)) 
+			logAR <- logAR + sum(lgamma(gamma[myPair] + nNew)) - sum(lgamma(gamma[myPair] + nOld))
+			if(is.finite(logAR)){ 
 			if( (log(runif(1)) < logAR) && (checkCondition == TRUE) ){
 				reallocationAcceptanceRatio4 <- reallocationAcceptanceRatio4 + 1 
 				z <- propZ
@@ -1023,7 +1031,7 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 					sMatrix[,k,] <- matrix(sx[k,],nrow = n,ncol = d,byrow = TRUE) - tmpM
 				}
 			}
-
+			}
 			}
 #	end of reallocation proposal from conditional probs
 
@@ -1070,22 +1078,15 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 				}		
 			}
 		}
-		if(iter %% (m/100) == 0){
-			#if(length(kValues) > 0){
-			#	plot(kValues)
-			#}
-#			if(length(kValues) > 0 ){points(rep(iter,K),p,col = 1:K,pch = K)}
-			cat(paste("                             ",100*round(iter/m,3),"% completed. ", 100*round(lmm*reallocationAcceptanceRatio/iter,3),"%, ",100*round(lmm*reallocationAcceptanceRatio2/iter,3),"%, ",100*round(lmm*reallocationAcceptanceRatio4/iter,3),"%, ",100*round(lmm*reallocationAcceptanceRatio3/iter,3),"%",sep=""),"\n");}
-
-		# label switching move
-#		perm <- sample(K,K,replace = FALSE)
-#		if(K < Kmax){
-#			perm <- c(perm,(K+1):Kmax)
-#		}
-#		z <- perm[z]
-#		nMatrix <- nMatrix[,perm]
-#		sMatrix <- sMatrix[,perm,] 
-
+		if( printProgress == TRUE){
+			if(iter %% (m/100) == 0){
+				cat(paste("                             ",100*round(iter/m,3),"% completed. ", 
+							100*round(lmm*reallocationAcceptanceRatio/iter,3),"%, ",
+							100*round(lmm*reallocationAcceptanceRatio2/iter,3),"%, ",
+							100*round(lmm*reallocationAcceptanceRatio4/iter,3),"%, ",
+							100*round(lmm*reallocationAcceptanceRatio3/iter,3),"%",
+				sep=""),"\n");}
+		}
 	}
 	close(conK)
 	close(conTheta)
@@ -1212,6 +1213,7 @@ allocationSamplerBinMix <- function(Kmax, alpha,beta,gamma,m,burn,data,thinning,
 	}
 	setwd("../")
 	cat(paste0("back to working directory now."),"\n")
+	return(kValues)
 }
 
 coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPrior,m, alpha, beta, gamma, z.true, ejectionAlpha, burn){
@@ -1276,7 +1278,7 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 		cat(paste("            Only 1 chain? Well."),"\n")
 		dir.create(outPrefix)
 		myHeat <- 1
-		allocationSamplerBinMix( alpha = alpha, beta = beta, gamma = gamma, m = 10*m, burn= 10*burn, data = x, 
+		asr <- allocationSamplerBinMix( alpha = alpha, beta = beta, gamma = gamma, m = 10*m, burn= 10*burn, data = x, 
 					thinning = 10,Kmax = Kmax, ClusterPrior = ClusterPrior,ejectionAlpha = ejectionAlpha, 
 					outputDir = outPrefix,Kstart = 1,heat=myHeat,metropolisMoves = c('M1','M2','M3','M4'),LS = FALSE, rsX = rsX, originalX = originalX)}
 	else{
@@ -1295,7 +1297,7 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 			outDir <- outputDirs[myChain]
 			dir.create(outDir)
 			myHeat <- temperatures[myChain]
-			allocationSamplerBinMix( alpha = alpha, beta = beta, gamma = gamma, m = 10, burn= 9, data = x, 
+			asr <- allocationSamplerBinMix( alpha = alpha, beta = beta, gamma = gamma, m = 10, burn= 9, data = x, 
 						thinning = 1,Kmax = Kmax, ClusterPrior = ClusterPrior,ejectionAlpha = ejectionAlpha, 
 						outputDir = outDir,Kstart=1,heat=myHeat,metropolisMoves='M3',LS = FALSE, rsX = rsX, originalX = originalX)
 		}
@@ -1374,6 +1376,7 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 			#prior constants2:
 			log.posterior <- log.posterior + lgamma(sum(gamma[1:K2])) - sum(lgamma(gamma[1:K2])) - K2*d*lbeta(alpha, beta)
 			logAR <- logAR + (temperatures[j1] - temperatures[j2])*log.posterior
+			#write(paste0('logAR = ',logAR),stderr())
 			#cat(paste('logAR =',logAR),'\n')
 			if( log(runif(1)) < logAR ){
 				ar <- ar + 1
@@ -1398,6 +1401,7 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 
 			if(iter %% (m/100) == 0){
 				matplot(sampledK[1:iter,],type = "l",lty = 1,lwd = 2, col = topo.colors(nChains))
+				points(sampledK[1:iter,1], type = "b",col = topo.colors(nChains)[1])
 				legend('topleft',paste0('f(z,K|data)^{',round(heats,3),'}'),lty = 1, lwd = 2, col = topo.colors(nChains))
 				write(paste0(100*iter/m,'% completed. Chain switching acceptance rate: ',100*round(ar/iter,3),'%.'),stderr())
 			}
@@ -1418,6 +1422,9 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 		close(conTheta)
 		close(conP)
 		close(conZ)
+		if(nChains > 1){
+			swapAcceptanceRate <- 100*round(ar/iter,3)
+		}else{ swapAcceptanceRate <- 'NA' }
 		if(length(rsX) > 0){
 			close(conX)
 		}
@@ -1443,6 +1450,52 @@ coupledMetropolis <- function(Kmax, nChains,heats,binaryData,outPrefix,ClusterPr
 			dealWithLabelSwitchingMissing(outDir = outPrefix, binaryData = binaryData, z.true = z.true)
 		}
 	}
+
+	# returning mcmc objects from coda package for the most probable number of clusters
+	if(nChains > 1){
+		kFile <- sampledK[(burn+1):ITERATIONS,1]
+	}else{
+		kFile <- read.table(paste0(outPrefix,"/K.txt"))
+		ITERATIONS <- m
+		swapAcceptanceRate <- 0
+	}
+	K <- as.numeric(names(table(kFile))[order(table(kFile),decreasing=TRUE)[1]])
+	K.mcmc <- mcmc(kFile, start = 10*burn + 10, end = 10*ITERATIONS, thin = 10)
+	if( K > 1 ){
+		parameters.ecr.mcmc <- read.table(paste0(outPrefix,"/reorderedMCMC-ECR.mapK.",K,".txt"), header = TRUE)
+		allocations.ecr.mcmc <- read.table(paste0(outPrefix,"/z.ECR.mapK.",K,".txt"), header = TRUE)
+		clusterMembershipPerMethod <- read.table(paste0(outPrefix,"/reorderedSingleBestClusterings.mapK.",K,".txt"), header = TRUE)
+		classificationProbabilities.ecr <- read.csv(paste0(outPrefix,"/classificationProbabilities.mapK.",K,".csv"))
+	}else{
+		parameters.ecr.mcmc <- read.table(paste0(outPrefix,"/MCMC.mapK.",K,".txt"), header = TRUE)
+		allocations.ecr.mcmc <- rep(1, dim(parameters.ecr.mcmc)[1] )
+		classificationProbabilities.ecr <- array(data = 1, dim = c(n,1))
+		clusterMembershipPerMethod <- array(data = 1, dim = c(n,3)) 
+		colnames(clusterMembershipPerMethod) <- c('ECR','STEPHENS','ECR-ITERATIVE-1')
+	}
+	parameters.ecr.mcmc <- mcmc( parameters.ecr.mcmc )
+	allocations.ecr.mcmc <- mcmc( allocations.ecr.mcmc )
+	colnames(classificationProbabilities.ecr) <- paste('cluster',1:K)
+	bbm.output <- vector('list', length = 7)
+	bbm.output[[1]] <- K.mcmc
+	bbm.output[[2]] <- parameters.ecr.mcmc
+	bbm.output[[3]] <- allocations.ecr.mcmc
+	bbm.output[[4]] <- classificationProbabilities.ecr
+	bbm.output[[5]] <- clusterMembershipPerMethod
+	if(nChains > 1){
+		sampledK <- array(sampledK, dim = c(ITERATIONS, nChains))
+		colnames(sampledK) <- paste0("chain.", 1:nChains) 
+		colnames(sampledK)[1] <- paste0(colnames(sampledK)[1],"_(target)")
+	}else{
+		sampledK <- asr
+		write.table(sampledK, file = paste0(outPrefix,"/K.allChains.txt"), 
+			col.names = 'chain.1',quote=FALSE,row.names = FALSE)
+	}
+	bbm.output[[6]] <- sampledK
+	bbm.output[[7]] <- c(nChains, swapAcceptanceRate, m, burn)
+	names(bbm.output) <- c('K.mcmc', 'parameters.ecr.mcmc', 'allocations.ecr.mcmc', 'classificationProbabilities.ecr', 'clusterMembershipPerMethod', 'K.allChains', 'chainInfo')
+	class(bbm.output) <- c('list', 'bbm.object')
+	return(bbm.output)
 }
 
 
@@ -1748,8 +1801,58 @@ dealWithLabelSwitchingMissing <- function(outDir,reorderModels, binaryData, z.tr
 
 }
 
-
-
+#' @export
+print.bbm.object <- function(x, printSubset, ...){
+	if( missing(printSubset) ){ printSubset = TRUE }
+	if( 'bbm.object' %in% class(x) ){
+		cat("\n")
+		cat(paste0("* Run information:"),"\n")
+		cat(paste0("      Number of parallel heated chains: ", x$chainInfo[1]),"\n")
+		cat(paste0("      Swap acceptance rate: ", x$chainInfo[2],"%"),"\n")
+		cat(paste0("      Total number of iterations: ", x$chainInfo[3]*10),"\n")
+		cat(paste0("      Burn-in period: ", x$chainInfo[4]*10),"\n")
+		cat(paste0("      Thinning: 10."),"\n")
+		kFile <- x$K.mcmc
+		cat("\n")
+		cat(paste("* Estimated posterior distribution of the number of clusters:"),"\n")
+		print(round(table(x$K.mcmc)/length(x$K.mcmc),3))		
+		K <- as.numeric(names(table(kFile))[order(table(kFile),decreasing=TRUE)[1]])
+		cat("\n")
+		cat(paste("* Most probable model: K = ",K," with P(K = ",K,"|data) = ",round(max(table(kFile)/length(kFile)),3),sep=""),"\n")
+		cat("\n")
+		cat(paste0("* Estimated number of observations per cluster conditionally on K = ", K," (3 label switching algorithms):"),'\n')
+		print(apply(x$clusterMembershipPerMethod,2,table))
+		d <- (dim(x$parameters.ecr.mcmc)[2] - K)/K
+		myMeans <- apply(x$parameters.ecr.mcmc,2,mean)
+		cat('\n')
+		if(printSubset == TRUE){
+			if(d > 5){
+				cat(paste0('* Posterior mean of probability of success per feature and cluster (ECR algorithm):'),'\n')
+				pr <- c()
+				for(k in 1:K){
+					subS <- paste0("theta.",k,".",1:d)[1:5]
+					pr <- cbind( pr, myMeans[subS])
+				}
+				colnames(pr) <- paste0("cluster_",1:K)
+				rownames(pr) <- paste0("theta_",1:5)
+				print(pr)
+				cat(paste0('   <+ ',d-5,' more rows>'),'\n')
+			}
+		}else{
+			cat(paste0('* Posterior mean of probability of success per feature and cluster (ECR algorithm):'),'\n')
+			pr <- c()
+			for(k in 1:K){
+				subS <- paste0("theta.",k,".",1:d)
+				pr <- cbind( pr, myMeans[subS])
+			}
+			colnames(pr) <- paste0("cluster_",1:K)
+			rownames(pr) <- paste0("theta_",1:d)
+			print(pr)			
+		}
+	}else{
+		cat(paste("    The input is not in class `bbm.object`"),'\n')
+	}
+}
 
 
 

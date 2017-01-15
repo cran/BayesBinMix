@@ -8,7 +8,8 @@ Standard Gibbs sampler
 This function implements full Gibbs sampling to simulate an MCMC sample from the posterior distribution assuming known number of mixture components.
 }
 \usage{
-gibbsBinMix(alpha, beta, gamma, K, m, burn, data, thinning, z.true, outputDir)
+gibbsBinMix(alpha, beta, gamma, K, m, burn, data, 
+	thinning, z.true, outputDir)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

@@ -8,8 +8,8 @@ Metropolis-coupled Markov chain Monte Carlo sampler
 Main function of the package. The algorithm consists of the allocation sampler combined with a MC3 scheme.
 }
 \usage{
-coupledMetropolis(Kmax, nChains, heats, binaryData, outPrefix, ClusterPrior,
-	 m, alpha, beta, gamma, z.true, ejectionAlpha, burn)
+coupledMetropolis(Kmax, nChains, heats, binaryData, outPrefix, 
+	ClusterPrior, m, alpha, beta, gamma, z.true, ejectionAlpha, burn)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -53,57 +53,79 @@ Probability of ejecting an empty component. Defaults to 0.2.
 Optional integer denoting the number of MCMC cycles that will be discarded as burn-in period.
 }
 }
-\details{
-In the case that the most probable number of clusters is larger than 1, the output is post-processed using the label.switching package. 
-}
 \value{
-The final output is written to the directory \code{outPrefix}. It consists of the following files:
-	\item{K.allChains.txt}{
+The basic output of the sampler is returned to the following \code{R} objects:
+	\item{K.mcmc}{
+		object of class \code{mcmc} (see \code{coda} package) containing the simulated values (after burn-in) of the number of clusters for the cold chain.
+	}
+	\item{parameters.ecr.mcmc}{
+		object of class \code{mcmc} (see \code{coda} package) containing the simulated values (after burn-in) of \eqn{\theta_{kj}} (probability of success per cluster \eqn{k} and feature \eqn{j}) and \eqn{\pi_k} (weight of cluster \eqn{k}) for \eqn{k = 1,\ldots,K_{\mbox{map}}}; \eqn{j = 1,\ldots,d}, where \eqn{K_{\mbox{map}}} denotes the most probable number of clusters. The output is reordered according to \code{ECR} algorithm.
+	}
+	\item{allocations.ecr.mcmc}{
+		object of class \code{mcmc} (see \code{coda} package) containing the simulated values (after burn-in) of \eqn{z_{kj}} (allocation variables) for \eqn{k = 1,\ldots,K_{\mbox{map}}}, \eqn{j = 1,\ldots,d}. The output is reordered according to \code{ECR} algorithm.
+	}
+	\item{classificationProbabilities.ecr}{
+		data frame of the reordered classification probabilities per observation after reordering the most probable number of clusters with the \code{ECR} algorithm.
+	}
+	\item{clusterMembershipPerMethod}{
+		data frame of the most probable allocation of each observation after reordering the MCMC sample which corresponds to the most probable number of clusters according to \code{ECR}, \code{STEPHENS} and \code{ECR-ITERATIVE-1} methods.
+	}
+	\item{K.allChains}{
 		\code{m}\eqn{\times}\code{nChains} matrix containing the simulated values of the number of clusters (\eqn{K}) per chain.
 	}
-	\item{K.txt}{
-		the \code{m} simulated values of the number of clusters (\eqn{K}) of the cold chain (posterior distribution).
+	\item{chainInfo}{
+		Number of cycles, burn-in period and acceptance rate of swap moves.
 	}
-	\item{p.varK.txt}{
-		the simulated values of the mixture weights (not identifiable).
+}
+\details{
+In the case that the most probable number of clusters is larger than 1, the output is post-processed using the label.switching package. In addition to the objects returned to the user (see \code{value} below), the complete output of the sampler is written to the directory \code{outPrefix}. It consists of the following files:
+	\itemize{
+		\item{K.allChains.txt}{
+			\code{m}\eqn{\times}\code{nChains} matrix containing the simulated values of the number of clusters (\eqn{K}) per chain.
+		}
+		\item{K.txt}{
+			the \code{m} simulated values of the number of clusters (\eqn{K}) of the cold chain (posterior distribution).
+		}
+		\item{p.varK.txt}{
+			the simulated values of the mixture weights (not identifiable).
+		}
+		\item{rawMCMC.mapK.KVALUE.txt}{
+			the raw MCMC output which corresponds to the most probable model (not identifiable).
+		}
+		\item{reorderedMCMC-ECR-ITERATIVE1.mapK.KVALUE.txt}{
+			the reordered MCMC output which corresponds to the most probable model, reordered according to the \code{ECR-ITERATIVE-1} algorithm.
+		}
+		\item{reorderedMCMC-ECR.mapK.KVALUE.txt}{
+			the reordered MCMC output which corresponds to the most probable model, reordered according to the \code{ECR} algorithm.
+		}
+		\item{reorderedMCMC-STEPHENS.mapK.KVALUE.txt}{
+			the reordered MCMC output which corresponds to the most probable model, reordered according to the \code{STEPHENS} algorithm.
+		}
+		\item{reorderedSingleBestClusterings.mapK.KVALUE.txt}{
+			the most probable allocation of each observation after reordering the MCMC sample which corresponds to the most probable number of clusters.
+		}
+		\item{theta.varK.txt}{
+			the simulated values of Bernoulli parameters (not identifiable).
+		}
+		\item{z-ECR-ITERATIVE1.mapK.KVALUE.txt}{
+			the reordered simulated latent allocations which corresponds to the most probable model, reordered according to the \code{ECR-ITERATIVE-1} algorithm.
+		}
+		\item{z-ECR.mapK.KVALUE.txt}{
+			the reordered simulated latent allocations which corresponds to the most probable model, reordered according to the \code{ECR} algorithm.
+		}
+		\item{z-KL.mapK.KVALUE.txt}{
+			the reordered simulated latent allocations which corresponds to the most probable model, reordered according to the \code{STEPHENS} algorithm.
+		}
+		\item{z.varK.txt}{
+			the simulated latent allocations (not identifiable).
+		}
+		\item{classificationProbabilities.mapK.KVALUE.csv}{
+			the reordered classification probabilities per observation after reordering the most probable number of clusters with the \code{ECR} algorithm.
+		}
+		\item{xEstimated.txt}{
+			Observed data with missing values estimated by their posterior mean estimate. This file is produced only in the case that the observed data contains missing values.
+		}
 	}
-	\item{rawMCMC.mapK.KVALUE.txt}{
-		the raw MCMC output which corresponds to the most probable model (not identifiable).
-	}
-	\item{reorderedMCMC-ECR-ITERATIVE1.mapK.KVALUE.txt}{
-		the reordered MCMC output which corresponds to the most probable model, reordered according to the \code{ECR-ITERATIVE-1} algorithm.
-	}
-	\item{reorderedMCMC-ECR.mapK.KVALUE.txt}{
-		the reordered MCMC output which corresponds to the most probable model, reordered according to the \code{ECR} algorithm.
-	}
-	\item{reorderedMCMC-STEPHENS.mapK.KVALUE.txt}{
-		the reordered MCMC output which corresponds to the most probable model, reordered according to the \code{STEPHENS} algorithm.
-	}
-	\item{reorderedSingleBestClusterings.mapK.KVALUE.txt}{
-		the most probable allocation of each observation after reordering the MCMC sample which corresponds to the most probable number of clusters.
-	}
-	\item{theta.varK.txt}{
-		the simulated values of Bernoulli parameters (not identifiable).
-	}
-	\item{z-ECR-ITERATIVE1.mapK.KVALUE.txt}{
-		the reordered simulated latent allocations which corresponds to the most probable model, reordered according to the \code{ECR-ITERATIVE-1} algorithm.
-	}
-	\item{z-ECR.mapK.KVALUE.txt}{
-		the reordered simulated latent allocations which corresponds to the most probable model, reordered according to the \code{ECR} algorithm.
-	}
-	\item{z-KL.mapK.KVALUE.txt}{
-		the reordered simulated latent allocations which corresponds to the most probable model, reordered according to the \code{STEPHENS} algorithm.
-	}
-	\item{z.varK.txt}{
-		the simulated latent allocations (not identifiable).
-	}
-	\item{classificationProbabilities.mapK.KVALUE.csv}{
-		the reordered classification probabilities per observation after reordering the most probable number of clusters with the \code{ECR} algorithm.
-	}
-	\item{xEstimated.txt}{
-		Observed data with missing values estimated by their posterior mean estimate. This file is produced only in the case that the observed data contains missing values.
-	}
-
 \code{KVALUE} will be equal to the inferred number of clusters. Note that the label switching part is omitted in case that the most probable number of clusters is equal to 1.
 
 }
@@ -133,7 +155,8 @@ K <- 2 	 # true number of clusters
 p.true <- myDirichlet(rep(10,K)) # true weight of each cluster
 z.true <- numeric(n) # true cluster membership
 z.true <- sample(K,n,replace=TRUE,prob = p.true)
-theta.true <- array(data = NA, dim = c(K,d)) 	#true probability of positive responses per cluster
+#true probability of positive responses per cluster:
+theta.true <- array(data = NA, dim = c(K,d)) 
 for(j in 1:d){
     theta.true[,j] <- rbeta(K, shape1 = 1, shape2 = 1)
 }
@@ -141,22 +164,24 @@ x <- array(data=NA,dim = c(n,d)) # data: n X d array
 for(k in 1:K){
         myIndex <- which(z.true == k)
         for (j in 1:d){
-                x[myIndex,j] <- rbinom(n = length(myIndex), size = 1, prob = theta.true[k,j])   
+                x[myIndex,j] <- rbinom(n = length(myIndex), 
+			size = 1, prob = theta.true[k,j])   
         }
 }
 #	number of heated paralled chains
 nChains <- 2
 heats <- seq(1,0.8,length = nChains)
-# NOTE: only m = 5 iterations are used here (modify to m = 1000 for non-erroneous results)
-coupledMetropolis(Kmax = 10,nChains = nChains,heats =  heats,binaryData = x, 
-	outPrefix = 'BayesBinMixExample',ClusterPrior = 'poisson',m = 5)
-# it is also advised to use z.true = z.true in order to directly compare with the true values.
-# in general it is advised to use at least 4 chains with heats <- seq(1,0.3,length = nChains)
+\dontrun{
+cm <- coupledMetropolis(Kmax = 10,nChains = nChains,heats =  heats,
+	binaryData = x, outPrefix = 'BayesBinMixExample',
+	ClusterPrior = 'poisson', m = 1100, burn = 100)
+#	print summary using:
+print(cm)
+}
+# it is also advised to use z.true = z.true in order to directly compare with 
+# the true values. In general it is advised to use at least 4 chains with 
+#	heats <- seq(1,0.3,length = nChains)
 
 
 
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line
