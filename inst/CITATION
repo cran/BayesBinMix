@@ -1,0 +1,24 @@
+bibentry(bibtype = "Article",
+  author = c( 
+		person(given = "Panagiotis",
+                        family = "Papastamoulis",
+                        email = "papapast@yahoo.gr"),
+		person(given = "Magnus",
+			        family = "Rattray",
+			        email = "magnus.rattray@manchester.ac.uk")
+	),
+  title = "{BayesBinMix: an R Package for Model Based Clustering of
+          Multivariate Binary Data}",
+  year = "2017",
+  journal = "{The R Journal}",
+  url = "https://journal.r-project.org/archive/2017/RJ-2017-022/index.html",
+  pages = "403--420",
+  volume = "9",
+  number = "1",
+  header       = "To cite BayesBinMix in publications use:",
+  textVersion  =
+  paste("Panagiotis Papastamoulis and Magnus Rattray (2017).",
+        "BayesBinMix: an R Package for Model Based Clustering of Multivariate Binary Data.",
+        "The R Journal (2017) 9:1, pages 403-420.")
+)
+
